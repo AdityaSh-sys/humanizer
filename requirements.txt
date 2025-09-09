@@ -1,0 +1,7 @@
+streamlit
+torch
+transformers
+sentence-transformers
+scikit-learn
+nltk
+huggingface_hub<0.14,>=0.13.3
