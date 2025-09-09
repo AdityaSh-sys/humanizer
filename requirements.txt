@@ -1,7 +1,7 @@
 streamlit==1.37.0
 torch>=2.5.0
-transformers==4.43.4   # newer, supports Python 3.13
-sentence-transformers
+transformers>=4.43.4
+sentence-transformers>=3.0.1
 scikit-learn
 nltk
 huggingface-hub>=0.23.0,<1.0
