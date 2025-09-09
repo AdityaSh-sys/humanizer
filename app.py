@@ -30,11 +30,14 @@ COMMON_WORDS_SET = load_common_words()
 # -----------------------
 @st.cache_resource
 def load_models():
+    # 
     paraphraser = pipeline(
-        "text2text-generation",
-        model="Vamsi/T5_Paraphrase_Paws",
-        device=0 if torch.cuda.is_available() else -1
-    )
+    "text2text-generation",
+    model="Vamsi/T5_Paraphrase_Paws",
+    device=0 if torch.cuda.is_available() else -1,
+    tokenizer_kwargs={"use_fast": False}   # 👈 force slow tokenizer
+)
+
     gpt2_model = GPT2LMHeadModel.from_pretrained("distilgpt2")  # smaller GPT2
     gpt2_tokenizer = GPT2TokenizerFast.from_pretrained("distilgpt2")
     gpt2_tokenizer.pad_token = gpt2_tokenizer.eos_token
