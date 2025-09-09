@@ -1,7 +1,7 @@
 import streamlit as st
 import random, math, io, torch, numpy as np, re, nltk
 from nltk.corpus import wordnet
-from transformers import pipeline, GPT2LMHeadModel, GPT2TokenizerFast
+from transformers import pipeline, GPT2LMHeadModel, GPT2TokenizerFast, AutoTokenizer, AutoModelForSeq2SeqLM
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -30,20 +30,27 @@ COMMON_WORDS_SET = load_common_words()
 # -----------------------
 @st.cache_resource
 def load_models():
-    # 
-    paraphraser = pipeline(
-    "text2text-generation",
-    model="Vamsi/T5_Paraphrase_Paws",
-    device=0 if torch.cuda.is_available() else -1,
-    tokenizer_kwargs={"use_fast": False}   # 👈 force slow tokenizer
-)
+    # ✅ Force slow tokenizer (avoids SentencePiece->fast conversion error)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "Vamsi/T5_Paraphrase_Paws",
+        use_fast=False
+    )
+    model = AutoModelForSeq2SeqLM.from_pretrained("Vamsi/T5_Paraphrase_Paws")
 
-    gpt2_model = GPT2LMHeadModel.from_pretrained("distilgpt2")  # smaller GPT2
+    paraphraser = pipeline(
+        "text2text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        device=0 if torch.cuda.is_available() else -1
+    )
+
+    gpt2_model = GPT2LMHeadModel.from_pretrained("distilgpt2")
     gpt2_tokenizer = GPT2TokenizerFast.from_pretrained("distilgpt2")
     gpt2_tokenizer.pad_token = gpt2_tokenizer.eos_token
     gpt2_model.eval()
     if torch.cuda.is_available():
         gpt2_model.to("cuda")
+
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
     return paraphraser, gpt2_model, gpt2_tokenizer, embedder
 
@@ -80,10 +87,10 @@ def simplify_to_common(text, extra_noise=False):
 
 def clean_text_output(text):
     text = text.replace("-", " ")
-    text = re.sub(r"\.\s*\.", ".", text)           
-    text = re.sub(r"([!?]){2,}", r"\1", text)      
-    text = re.sub(r",\s*,+", ", ", text)           
-    text = re.sub(r"\s+", " ", text)               
+    text = re.sub(r"\.\s*\.", ".", text)
+    text = re.sub(r"([!?]){2,}", r"\1", text)
+    text = re.sub(r",\s*,+", ", ", text)
+    text = re.sub(r"\s+", " ", text)
     text = re.sub(r"\b[Pp]araphrase\b[:]*", "", text)
     text = re.sub(r"\b[Ff]alse\b[.:]*", "", text)
     return text.strip()
@@ -108,9 +115,8 @@ def multi_pass_rewrite(sentences, temp=0.7, style_hint=None, imperfection=0, pas
             rewritten = paraphrase_once(rewritten, temp=temp, style_hint=style_hint)
             rewritten = simplify_to_common(rewritten, extra_noise=True)
 
-            # human-style noise: shuffle sentence breaks
             if random.random() < 0.25:
-                rewritten = rewritten.replace(",", ".")  
+                rewritten = rewritten.replace(",", ".")  # noise: shuffle sentence breaks
 
         if imperfection > 0 and random.random() < imperfection / 8:
             rewritten = rewritten.capitalize()

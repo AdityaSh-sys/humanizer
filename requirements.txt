@@ -1,8 +1,8 @@
 streamlit==1.37.0
-torch>=2.5.0
-transformers>=4.43.4
-sentence-transformers>=3.0.1
+rich==13.9.2
+torch==2.5.0
+transformers==4.43.4
+sentence-transformers==3.0.1
 scikit-learn
 nltk
 huggingface-hub>=0.23.0,<1.0
-tokenizers==0.20.1
