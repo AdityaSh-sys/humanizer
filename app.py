@@ -30,20 +30,20 @@ COMMON_WORDS_SET = load_common_words()
 # -----------------------
 @st.cache_resource
 def load_models():
-    # ✅ Force slow tokenizer (avoids SentencePiece->fast conversion error)
+    # Force load slow tokenizer for T5
     tokenizer = AutoTokenizer.from_pretrained(
         "Vamsi/T5_Paraphrase_Paws",
-        use_fast=False
+        use_fast=False  # strictly no fast tokenizer
     )
     model = AutoModelForSeq2SeqLM.from_pretrained("Vamsi/T5_Paraphrase_Paws")
-
     paraphraser = pipeline(
         "text2text-generation",
         model=model,
         tokenizer=tokenizer,
-        device=0 if torch.cuda.is_available() else -1
+        device=0 if torch.cuda.is_available() else -1,
     )
 
+    # GPT-2 for perplexity
     gpt2_model = GPT2LMHeadModel.from_pretrained("distilgpt2")
     gpt2_tokenizer = GPT2TokenizerFast.from_pretrained("distilgpt2")
     gpt2_tokenizer.pad_token = gpt2_tokenizer.eos_token
@@ -51,7 +51,9 @@ def load_models():
     if torch.cuda.is_available():
         gpt2_model.to("cuda")
 
+    # Sentence embeddings
     embedder = SentenceTransformer("all-MiniLM-L6-v2")
+
     return paraphraser, gpt2_model, gpt2_tokenizer, embedder
 
 paraphraser, gpt2_model, gpt2_tokenizer, embedder = load_models()
